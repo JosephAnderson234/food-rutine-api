@@ -1,0 +1,5 @@
+allowBuilds:
+  "@prisma/engines": true
+  prisma: true
+  # Telemetría de Swagger UI: no hace falta.
+  "@scarf/scarf": false

@@ -1,0 +1,95 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Una persona que usa la app. Se identifica con su cuenta de Google (sin contraseñas).
+model User {
+  id         String   @id @default(uuid())
+  googleSub  String   @unique
+  email      String   @unique
+  name       String?
+  pictureUrl String?
+  /// Contador de versiones de sincronización: cada cambio recibe el siguiente número.
+  syncSeq    BigInt   @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  refreshTokens     RefreshToken[]
+  syncDocs          SyncDoc[]
+  pushSubscriptions PushSubscription[]
+  reminders         Reminder[]
+}
+
+/// Refresh token opaco; rota en cada uso (se borra el presentado y se emite otro).
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// Documento sincronizado de una colección del cliente (porciones, casillas, ajustes…).
+/// El servidor no interpreta el contenido salvo para resolver conflictos.
+model SyncDoc {
+  userId          String
+  collection      String
+  docId           String
+  data            Json?
+  deleted         Boolean  @default(false)
+  /// Versión asignada por el servidor (User.syncSeq): permite "dame lo posterior a X".
+  version         BigInt
+  /// Momento del cambio en el dispositivo; decide conflictos (último en escribir gana).
+  clientUpdatedAt DateTime
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, collection, docId])
+  @@index([userId, version])
+}
+
+/// Suscripción Web Push de un navegador/dispositivo.
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// Aviso programado (p. ej. "Pasar taper #5 a la refri" a las 21:00).
+model Reminder {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Grupo que el cliente reemplaza en bloque (p. ej. la semana "2026-09-27").
+  scope     String
+  /// Identidad estable dentro del grupo (evita duplicados al reenviar).
+  key       String
+  title     String
+  body      String
+  url       String    @default("/hoy")
+  fireAt    DateTime
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, scope, key])
+  @@index([fireAt, sentAt])
+}

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+src/generated/
+*.tsbuildinfo
+
+# Entorno: nunca subir secretos
+.env
+.env.*
+!.env.example
+
+# SO / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
