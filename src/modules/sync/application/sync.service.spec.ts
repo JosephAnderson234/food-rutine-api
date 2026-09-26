@@ -44,6 +44,12 @@ function memoryRepo(): SyncRepository & { docs: Map<string, SyncedDoc> } {
   };
 }
 
+/** Cifrado de juguete: invierte el texto. */
+const fakeCipher = {
+  seal: (v: string) => v.split('').reverse().join(''),
+  open: (v: string) => v.split('').reverse().join(''),
+};
+
 const change = (docId: string, data: unknown, iso: string) => ({
   collection: 'portions' as const,
   docId,
@@ -53,7 +59,7 @@ const change = (docId: string, data: unknown, iso: string) => ({
 
 describe('SyncService', () => {
   it('push → pull devuelve lo enviado con cursor', async () => {
-    const svc = new SyncService(memoryRepo());
+    const svc = new SyncService(memoryRepo(), fakeCipher);
     const r = await svc.push('u', [
       change('p1', { state: 'fridge' }, '2026-09-27T10:00:00Z'),
     ]);
@@ -65,7 +71,7 @@ describe('SyncService', () => {
   });
 
   it('pagina con hasMore', async () => {
-    const svc = new SyncService(memoryRepo());
+    const svc = new SyncService(memoryRepo(), fakeCipher);
     await svc.push('u', [
       change('a', {}, '2026-09-27T10:00:00Z'),
       change('b', {}, '2026-09-27T10:00:00Z'),
@@ -80,7 +86,7 @@ describe('SyncService', () => {
 
   it('un reloj adelantado no gana para siempre', async () => {
     const repo = memoryRepo();
-    const svc = new SyncService(repo);
+    const svc = new SyncService(repo, fakeCipher);
     const now = Date.parse('2026-09-27T10:00:00Z');
     await svc.push(
       'u',
@@ -106,5 +112,26 @@ describe('SyncService', () => {
     expect(
       (merge(inc, cur)?.data as { state?: string } | undefined)?.state,
     ).toBe('eaten');
+  });
+
+  it('guarda el token de Todoist cifrado y lo entrega descifrado', async () => {
+    const repo = memoryRepo();
+    const svc = new SyncService(repo, fakeCipher);
+    await svc.push('u', [
+      {
+        collection: 'settings',
+        docId: 'default',
+        data: { id: 'default', todoist: { token: 'tok_123' } },
+        clientUpdatedAt: '2026-09-27T10:00:00Z',
+      },
+    ]);
+    expect(
+      JSON.stringify(repo.docs.get('settings:default')?.data),
+    ).not.toContain('tok_123');
+    const pulled = await svc.pull('u');
+    expect(pulled.changes[0].data).toEqual({
+      id: 'default',
+      todoist: { token: 'tok_123' },
+    });
   });
 });

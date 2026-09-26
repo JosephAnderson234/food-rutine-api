@@ -13,6 +13,8 @@ export const envValidationSchema = Joi.object({
   GOOGLE_CLIENT_ID: Joi.string().required(),
   /** Orígenes permitidos, separados por coma (p. ej. la URL de Vercel y localhost). */
   CORS_ORIGIN: Joi.string().required(),
+  /** 32 bytes en base64: cifra secretos sincronizados (token de Todoist). */
+  SYNC_SECRETS_KEY: Joi.string().base64().length(44).required(),
   VAPID_PUBLIC_KEY: Joi.string().required(),
   VAPID_PRIVATE_KEY: Joi.string().required(),
   /** Contacto para los servicios de push, p. ej. mailto:tu@correo.com */

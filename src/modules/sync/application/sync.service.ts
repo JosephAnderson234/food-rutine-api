@@ -1,7 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type IncomingChange, merge } from '../domain/merge.js';
+import { openSecrets, sealSecrets } from '../domain/secrets.js';
+import type { SecretCipher } from '../ports/SecretCipher.js';
 import type { SyncRepository } from '../ports/SyncRepository.js';
-import { SYNC_REPOSITORY } from '../sync.tokens.js';
+import { SECRET_CIPHER, SYNC_REPOSITORY } from '../sync.tokens.js';
 import type { ChangeDto } from './dto/sync.dto.js';
 
 /** Los cursores y versiones viajan como string: JSON no representa BigInt. */
@@ -29,7 +31,10 @@ const MAX_CLOCK_SKEW_MS = 5 * 60_000;
 
 @Injectable()
 export class SyncService {
-  constructor(@Inject(SYNC_REPOSITORY) private readonly repo: SyncRepository) {}
+  constructor(
+    @Inject(SYNC_REPOSITORY) private readonly repo: SyncRepository,
+    @Inject(SECRET_CIPHER) private readonly cipher: SecretCipher,
+  ) {}
 
   async push(
     userId: string,
@@ -41,7 +46,10 @@ export class SyncService {
       return {
         collection: c.collection,
         docId: c.docId,
-        data: c.data ?? null,
+        // Los campos secretos (token de Todoist) se guardan cifrados.
+        data: sealSecrets(c.collection, c.data ?? null, (v) =>
+          this.cipher.seal(v),
+        ),
         // Un dispositivo con el reloj adelantado no debe "ganar" para siempre.
         clientUpdatedAt: new Date(Math.min(t, now + MAX_CLOCK_SKEW_MS)),
       };
@@ -61,7 +69,7 @@ export class SyncService {
       changes: page.map((r) => ({
         collection: r.collection,
         docId: r.docId,
-        data: r.data,
+        data: openSecrets(r.collection, r.data, (v) => this.cipher.open(v)),
         deleted: r.deleted,
         clientUpdatedAt: r.clientUpdatedAt.toISOString(),
         version: r.version.toString(),
