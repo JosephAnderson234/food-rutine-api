@@ -45,7 +45,9 @@ Global: `src/prisma` (`@Global PrismaModule`), `src/shared/auth` (`@Auth()`, `@C
 
 ## Despliegue
 
-- VPS con Docker Compose (`api` + `db`). **Docker se salta UFW**: la API publica solo en `127.0.0.1:${API_PORT}` y Postgres no publica puertos. nginx del host termina HTTPS y hace proxy.
+- VPS con Docker Compose (`api` + `db` + `tunnel`). Público en **https://api.tu-dominio.com** vía **Cloudflare Tunnel** (`cloudflared`, túnel `food-rutine-api` creado por CLI): no hay puertos abiertos en el VPS y Cloudflare termina HTTPS.
+- **Docker se salta UFW**: la API publica solo en `127.0.0.1:${API_PORT}` (para depurar) y Postgres no publica puertos.
+- `./cloudflared/config.yml` y `./cloudflared/credentials.json` viven solo en el servidor (gitignored).
 - La imagen aplica `prisma migrate deploy` al arrancar.
 
 ## Comandos

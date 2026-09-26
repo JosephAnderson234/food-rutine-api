@@ -54,7 +54,9 @@ Claves VAPID: `pnpm exec web-push generate-vapid-keys`.
 docker compose up -d --build
 ```
 
-La API escucha solo en `127.0.0.1:${API_PORT}` y Postgres no publica puertos: un proxy con HTTPS (nginx) la expone. La imagen aplica las migraciones al arrancar.
+Se publica con **Cloudflare Tunnel** (servicio `tunnel`): sin puertos abiertos en el servidor y con HTTPS de Cloudflare. Postgres no publica puertos y la API solo escucha en `127.0.0.1`. La imagen aplica las migraciones al arrancar.
+
+Producción: `https://api.tu-dominio.com` (docs en `/docs`).
 
 ## Licencia
 

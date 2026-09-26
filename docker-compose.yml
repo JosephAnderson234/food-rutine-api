@@ -1,6 +1,7 @@
-# Producción en el VPS: API + Postgres propios.
-# - Postgres no publica puertos: solo lo ve la API por la red interna.
-# - La API escucha solo en 127.0.0.1; nginx del host la expone con HTTPS.
+# Producción en el VPS: API + Postgres + Cloudflare Tunnel.
+# - Ningún puerto abierto a internet: `tunnel` sale hacia Cloudflare y le entrega
+#   el tráfico de https://<hostname> a la API por la red interna de Docker.
+# - Postgres no publica puertos. La API solo en 127.0.0.1 (para depurar desde el host).
 #   (Docker se salta UFW: nunca publicar en 0.0.0.0.)
 services:
   api:
@@ -30,6 +31,18 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  # Túnel creado con `cloudflared tunnel create`. `./cloudflared/` (fuera de git) contiene:
+  #   config.yml        → tunnel, credentials-file e ingress hacia http://api:3000
+  #   credentials.json  → credenciales del túnel (secreto)
+  tunnel:
+    image: cloudflare/cloudflared:2026.9.3
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+    depends_on:
+      - api
 
 volumes:
   pgdata:
