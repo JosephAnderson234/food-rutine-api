@@ -56,7 +56,7 @@ docker compose up -d --build
 
 Se publica con **Cloudflare Tunnel** (servicio `tunnel`): sin puertos abiertos en el servidor y con HTTPS de Cloudflare. Postgres no publica puertos y la API solo escucha en `127.0.0.1`. La imagen aplica las migraciones al arrancar.
 
-Producción: `https://api.tu-dominio.com` (docs en `/docs`).
+Producción: el hostname configurado en `cloudflared/config.yml` (p. ej. `https://api.tu-dominio.com`, docs en `/docs`).
 
 ## Licencia
 
